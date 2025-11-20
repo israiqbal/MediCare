@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MediCare</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <!-- local image path (keep as-is) -->
+        <img src="medicare.png" alt="MediCare logo" />
+        <div>
+          <h1>MediCare</h1>
+          <p class="sub">Your wellness companion</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="request-notif" class="btn small">Enable Reminders</button>
+        <button id="btn-add-member" class="btn primary">
+          + Add Family Member
+        </button>
+        <button id="btn-add-med" class="btn primary outline">
+          + Add Medicine
+        </button>
+      </div>
+    </header>
+
+    <main class="container">
+      <aside class="sidebar">
+        <h3>Family Members</h3>
+        <ul id="member-list" class="member-list"></ul>
+      </aside>
+
+      <section class="mainpanel">
+        <div class="topbar">
+          <input id="search" placeholder="Search medicines..." />
+          <div class="custom-select-wrap">
+            <select id="filter-member" class="custom-select">
+              <option value="all">All members</option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+
+        <div id="today-section" class="card">
+          <h2>Today's Schedule</h2>
+          <div id="today-list">
+            No medicines for today. Add one to see schedule.
+          </div>
+        </div>
+
+        <div id="med-list" class="card">
+          <h2 id="med-list-title">Medicines</h2>
+          <div id="medicines-grid">No medicines yet.</div>
+        </div>
+
+        <div class="card small tracker-card">
+          <div class="tracker-head">
+            <h3>Tracker</h3>
+            <div id="tracker-summary" class="tracker-summary">No data</div>
+          </div>
+          <canvas
+            id="adherence-chart"
+            width="520"
+            height="120"
+            class="chart-canvas"
+          ></canvas>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <button id="modal-close" class="modal-close">✕</button>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>
+        Disclaimer: This is a reminder tool only and does not prescribe
+        medicine.
+      </p>
+    </footer>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
