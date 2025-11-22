@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>MediCare</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/png" href="icons/medicare.png" />
   </head>
   <body>
     <header class="header">
       <div class="logo">
         <!-- local image path (keep as-is) -->
-        <img src="medicare.png" alt="MediCare logo" />
+        <img src="icons/medicare.png" alt="MediCare logo" />
         <div>
           <h1>MediCare</h1>
           <p class="sub">Your wellness companion</p>
@@ -21,9 +22,7 @@
         <button id="btn-add-member" class="btn primary">
           + Add Family Member
         </button>
-        <button id="btn-add-med" class="btn primary outline">
-          + Add Medicine
-        </button>
+        <button id="btn-add-med" class="btn outline">+ Add Medicine</button>
       </div>
     </header>
 
@@ -56,17 +55,26 @@
           <div id="medicines-grid">No medicines yet.</div>
         </div>
 
-        <div class="card small tracker-card">
-          <div class="tracker-head">
-            <h3>Tracker</h3>
-            <div id="tracker-summary" class="tracker-summary">No data</div>
+        <div class="row-grp">
+          <div class="card small tracker-card">
+            <div class="tracker-head">
+              <h3>Weekly Tracker</h3>
+              <div id="tracker-summary" class="tracker-summary">No data</div>
+            </div>
+            <canvas
+              id="adherence-chart"
+              width="520"
+              height="120"
+              class="chart-canvas"
+            ></canvas>
           </div>
-          <canvas
-            id="adherence-chart"
-            width="520"
-            height="120"
-            class="chart-canvas"
-          ></canvas>
+          <div class="footer-box">
+            <span class="icon">⚠️</span>
+            <p>
+              Disclaimer: This is a reminder tool only and does not replace
+              medical advice.
+            </p>
+          </div>
         </div>
       </section>
     </main>
@@ -78,13 +86,6 @@
         <div id="modal-body"></div>
       </div>
     </div>
-
-    <footer class="footer">
-      <p>
-        Disclaimer: This is a reminder tool only and does not prescribe
-        medicine.
-      </p>
-    </footer>
 
     <script src="app.js" defer></script>
   </body>
