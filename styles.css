@@ -15,14 +15,14 @@
 * {
   box-sizing: border-box;
 }
-html,
+
 body {
   height: 100%;
 }
 body {
   margin: 0;
   font-family: Inter, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial;
-  background: linear-gradient(180deg, #f1f8ff, #f6fff8);
+  background: linear-gradient(180deg, #dbf3f7, #bcd7db);
   color: #0f172a;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -52,12 +52,13 @@ body {
 }
 .logo h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 30px;
   color: var(--accent);
 }
 .logo .sub {
   margin: 0;
-  font-size: 12px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--muted);
 }
 .controls {
@@ -185,7 +186,7 @@ body {
 
 /* Cards */
 .card {
-  background: var(--card);
+  background: #fff8ea;
   padding: 16px;
   border-radius: var(--radius);
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
@@ -195,13 +196,19 @@ body {
 }
 
 /* MEDICINE GRID (fixed width 4 columns) */
-#medicines-grid {
+/* #medicines-grid {
   display: grid;
   grid-template-columns: repeat(4, 260px);
   justify-content: center;
   gap: 16px;
   margin-top: 12px;
+} */
+#medicines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
 }
+
 .med-card {
   background: linear-gradient(180deg, #ffffff, #f7fffd);
   padding: 14px;
@@ -212,10 +219,28 @@ body {
   box-shadow: var(--shadow);
   transition: transform 0.08s, box-shadow 0.08s;
 }
+.med-card {
+  width: 100%;
+  max-width: 550px; /* keeps layout clean */
+  box-sizing: border-box;
+}
+
 .med-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 18px 40px rgba(2, 6, 23, 0.08);
 }
+
+.med-card .action-btn {
+  background: #97eeb6;
+  border: 2px solid #316041;
+  color: #316041;
+  font-weight: 600;
+}
+
+.med-card .action-btn:hover {
+  background: #aeffcb;
+}
+
 .med-top {
   display: flex;
   gap: 12px;
@@ -239,12 +264,15 @@ body {
   border-radius: 10px; /* keeps rounded corners */
 }
 .med-title {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .med-title h4 {
   margin: 0 0 6px 0;
   font-size: 16px;
 }
+
 .med-meta {
   font-size: 13px;
   color: var(--muted);
@@ -255,24 +283,39 @@ body {
   margin-top: 8px;
   flex-wrap: wrap;
 }
+
 .time-badge {
-  background: linear-gradient(90deg, #e6f6ff, #ecfeff);
-  padding: 6px 10px;
+  background: linear-gradient(90deg, #00baa7, #0094b7); /* dark pill */
+  padding: 5px 12px;
   border-radius: 999px;
   font-weight: 600;
   font-size: 13px;
-  color: #0369a1;
+  color: #ffffff; /* light text */
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
+
+.med-title h4 {
+  margin: 0 0 6px 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.med-meta {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
 .type-pill {
   background: var(--pill-bg);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   color: #065f46;
-  border: 1px solid rgba(6, 95, 70, 0.06);
+  border: 1px solid rgba(6, 95, 70, 0.14);
 }
 .actions {
   display: flex;
@@ -281,13 +324,15 @@ body {
   align-items: center;
 }
 .action-btn {
+  margin: 1px 7px;
   padding: 6px 10px;
-  border-radius: 8px;
-  border: none;
+  border-radius: 999px;
+  border: 2px solid #bdbdbd;
   background: #eef2ff;
-  color: var(--accent);
+  color: #4e525e;
   cursor: pointer;
   transition: transform 0.08s, background 0.08s;
+  font-weight: 700;
 }
 .action-btn:hover {
   transform: translateY(-2px);
@@ -368,7 +413,7 @@ body {
   padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid rgba(15, 23, 42, 0.06);
-  background: #fff;
+  background: #eef2ff;
   cursor: pointer;
   font-weight: 700;
 }
@@ -405,7 +450,7 @@ body {
   width: 720px;
   max-height: 80vh;
   overflow: auto;
-  background: var(--card);
+  background: #fff8ea;
   border-radius: 16px;
   padding: 18px;
   position: relative;
@@ -467,10 +512,11 @@ select,
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  padding: 10px;
-  border-radius: 12px;
-  background: #fbfdfb;
-  border: 1px solid rgba(15, 23, 42, 0.03);
+  margin: 2px;
+  padding: 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1.5px solid rgb(15, 23, 42);
   cursor: pointer;
 }
 .add-time:hover {
@@ -479,6 +525,12 @@ select,
 .hint {
   font-size: 13px;
   color: var(--muted);
+}
+
+input[type="date"] {
+  margin: 2px;
+  padding: 8px;
+  border-radius: 10px;
 }
 
 /* Chart canvas styling */
@@ -512,4 +564,204 @@ select,
   .chart-canvas {
     height: 96px;
   }
+}
+
+.buy-links {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: nowrap; /* force one line */
+  overflow-x: auto; /* scroll if too narrow */
+}
+
+.buy-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ffdaeb;
+  border: 1.5px solid #95134f;
+  color: #95134f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  margin-top: 4px;
+}
+
+.buy-btn {
+  flex: 1 1 calc(33.33% - 8px);
+  text-align: center;
+}
+
+.buy-btn:hover {
+  background: #ffebf4;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.buy-btn:active {
+  transform: translateY(0);
+}
+
+.med-doctor {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #eef2ff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.med-doctor-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.med-doctor-name {
+  font-weight: 600;
+}
+
+/* Avatar dropdown & avatar display */
+.avatar-select {
+  width: 160px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: linear-gradient(180deg, #fff, #fbfdff);
+  font-size: 16px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.member-avatar.emoji {
+  font-size: 18px;
+  line-height: 34px;
+  text-align: center;
+  color: #fff; /* not used for emoji but keep */
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f9b5ff, #632c9f);
+}
+
+/* small tweak: if you want text fallback */
+.member-avatar.emoji.empty {
+  background: linear-gradient(135deg, #cbd5e1, #f3f4f6);
+  color: #6b7280;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+}
+
+.icon-btn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  pointer-events: none; /* so clicks hit the button, not the image */
+}
+
+.icon-btn:hover {
+  background: #e0e7ff;
+  transform: translateY(-2px);
+}
+
+.icon-btn:active {
+  transform: translateY(0);
+}
+.member-item .icon-btn {
+  width: 28px;
+  height: 28px;
+  background: #eef2ff;
+}
+
+.member-item .icon-btn img {
+  width: 14px;
+  height: 14px;
+}
+
+/* Make all header buttons match Add Family Member styling */
+.header .controls .btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.15s ease;
+}
+
+/* Hover effect — same as Add Family Member */
+.header .controls .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.2);
+}
+
+/* Pressed effect */
+.header .controls .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.1);
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+div {
+  caret-color: transparent;
+}
+
+input {
+  caret-color: black;
+}
+
+.row-grp {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  gap: 20px;
+}
+
+.footer-box {
+  max-width: 350px;
+  background: #ffe1e1;
+  border: 2px solid #a64d4d;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: #8a3d05;
+  font-size: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-content:not(:has(input)) {
+  background: #ffffff;
+  box-shadow: 0px 12px 40px rgba(0, 0, 0, 0.2);
 }
