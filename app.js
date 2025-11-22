@@ -12,6 +12,16 @@ const LS = {
   lastNotified: "medtrack_lastnotified_v1",
 };
 
+function escapeHtml(str) {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function uid(prefix = "") {
   return prefix + Math.random().toString(36).slice(2, 10);
 }
@@ -115,17 +125,25 @@ function renderMembers() {
   users.forEach((u) => {
     const li = document.createElement("li");
     li.className = "member-item" + (u.id === activeMemberId ? " active" : "");
-    li.innerHTML = `<div style="display:flex;align-items:center"><div class="member-avatar"></div><div><strong>${
-      u.name
-    }</strong><div style="font-size:12px;color:#6b7280">${
+    li.innerHTML = `<div style="display:flex;align-items:center"><div class="member-avatar emoji ${
+      u.avatar ? "" : "empty"
+    }">${u.avatar ? u.avatar : "👤"}</div>
+<div><strong>${u.name}</strong><div style="font-size:12px;color:#6b7280">${
       u.relationship || "—"
     }</div></div></div>
-        <div><button class="small-btn" data-id="${
-          u.id
-        }" data-action="edit">Edit</button>
-        <button class="small-btn" data-id="${
-          u.id
-        }" data-action="del">Delete</button></div>`;
+        <div style="display:flex;flex-direction:row;gap:8px;align-items:center;">
+  <button class="icon-btn" data-id="${
+    u.id
+  }" data-action="edit" aria-label="Edit">
+    <img src="icons/pencil.png" alt="edit" />
+  </button>
+  <button class="icon-btn" data-id="${
+    u.id
+  }" data-action="del" aria-label="Delete">
+    <img src="icons/delete.png" alt="delete" />
+  </button>
+</div>
+`;
     li.addEventListener("click", (e) => {
       if (e.target.dataset && e.target.dataset.action) return;
       activeMemberId = u.id;
@@ -193,26 +211,44 @@ function renderMedicines() {
     card.className = "med-card";
     card.innerHTML = `
         <div class="med-top">
-          <div class="med-icon" ><img src="medicare2.png"></div>
+          <div class="med-icon" ><img src="icons/medicare2.png"></div>
           <div class="med-title">
             <h4>${m.name}</h4>
-            <div class="med-meta">${m.dosage || ""} • ${
-      m.type || ""
-    } • <small>${owner ? owner.name : "—"}</small></div>
+            <div class="med-meta">${m.dosage || ""} • ${m.type || ""}</div>
             <div class="badges"><div class="type-pill">${freqText}</div>${(
       m.times || []
     )
       .map((t) => `<div class="time-badge">${t}</div>`)
       .join("")}</div>
+      <!-- BUY LINKS -->
+<div class="buy-links">
+  <button class="buy-btn" data-url="https://pharmeasy.in/search/all?name=${encodeURIComponent(
+    m.name
+  )}">PharmEasy</button>
+
+  <button class="buy-btn" data-url="https://www.netmeds.com/products?q=${encodeURIComponent(
+    m.name
+  )}">Netmeds</button>
+
+  <button class="buy-btn" data-url="https://www.apollopharmacy.in/search-medicines/${encodeURIComponent(
+    m.name
+  )}">Apollo</button>
+</div>
+
           </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="small-btn" data-id="${
-              m.id
-            }" data-act="edit">✎</button>
-            <button class="small-btn" data-id="${
-              m.id
-            }" data-act="del">🗑</button>
-          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+  <button class="small-btn icon-btn" data-id="${
+    m.id
+  }" data-act="edit" aria-label="Edit medicine">
+    <img src="icons/pencil.png" alt="edit" />
+  </button>
+  <button class="small-btn icon-btn" data-id="${
+    m.id
+  }" data-act="del" aria-label="Delete medicine">
+    <img src="icons/delete.png" alt="delete" />
+  </button>
+</div>
+
         </div>
         <div class="stock-box">
           <div style="flex:1">
@@ -231,8 +267,25 @@ function renderMedicines() {
             }" data-act="view">View</button>
           </div>
         </div>
+        <div class="med-doctor">
+  <span class="med-doctor-label">Prescribed by</span>
+  <span class="med-doctor-name">
+    ${m.prescribedBy ? escapeHtml(m.prescribedBy) : "—"}
+  </span>
+</div>
+
+
       `;
     card.querySelectorAll("button").forEach((btn) => {
+      // BUY-LINK CLICKS
+      card.querySelectorAll(".buy-btn").forEach((b) => {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation(); // avoid card click events
+          const url = b.dataset.url;
+          window.open(url, "_blank");
+        });
+      });
+
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
@@ -432,42 +485,77 @@ function renderTracker() {
     drawChart([]);
     return;
   }
+
   const memberMeds = meds.filter((m) => m.familyMemberId === activeMemberId);
   if (memberMeds.length === 0) {
     trackerSummary.textContent = "No medicines";
     drawChart([]);
     return;
   }
-  const totalDoses = memberMeds.reduce(
-    (acc, m) => acc + (m.times || []).length,
-    0
-  );
-  const events = loadAdherence();
-  const taken = events.filter(
-    (e) => e.familyMemberId === activeMemberId && e.taken
-  ).length;
-  trackerSummary.innerHTML = `<strong>${taken} / ${totalDoses}</strong> doses taken (last recorded)`;
 
-  const days = [];
   const istNow = nowIST();
+  const todayDate = istNow.toISOString().slice(0, 10);
+  const events = loadAdherence();
+
+  // ---- TODAY'S TRACKER (summary at top) ----
+  const totalToday = memberMeds.reduce((acc, m) => {
+    // effective start = explicit startDate OR createdAt date OR today
+    const createdDate = m.createdAt ? m.createdAt.slice(0, 10) : todayDate;
+    const effectiveStart = m.startDate || createdDate;
+
+    // if medicine hasn't started yet on today, skip it
+    if (effectiveStart > todayDate) return acc;
+    if (m.endDate && m.endDate < todayDate) return acc;
+
+    return acc + (m.times || []).length;
+  }, 0);
+
+  const takenToday = events.filter(
+    (e) =>
+      e.familyMemberId === activeMemberId && e.date === todayDate && e.taken
+  ).length;
+
+  trackerSummary.innerHTML = `<strong>${takenToday} / ${totalToday}</strong> doses taken today`;
+  // ------------------------------------------
+
+  // ---- WEEKLY CHART (last 7 days) ----
+  const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(istNow);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
+
     let scheduled = 0;
+
     memberMeds.forEach((m) => {
-      if (m.startDate && m.startDate > dateStr) return;
+      const createdDate = m.createdAt ? m.createdAt.slice(0, 10) : dateStr;
+      const effectiveStart = m.startDate || createdDate;
+
+      // if this medicine starts AFTER this day, ignore it for this day
+      if (effectiveStart > dateStr) return;
+
+      // if it ended BEFORE this day, ignore it for this day
       if (m.endDate && m.endDate < dateStr) return;
+
       scheduled += (m.times || []).length;
     });
+
     const takenCount = events.filter(
       (e) =>
         e.familyMemberId === activeMemberId && e.date === dateStr && e.taken
     ).length;
+
     const percent =
       scheduled === 0 ? 0 : Math.round((takenCount / scheduled) * 100);
-    days.push({ date: dateStr, scheduled, taken: takenCount, percent });
+
+    days.push({
+      date: dateStr,
+      scheduled,
+      taken: takenCount,
+      percent,
+    });
   }
+
   drawChart(days);
 }
 
@@ -565,42 +653,68 @@ function roundRect(ctx, x, y, w, h, r, fill = true, stroke = true) {
 // ---------- Add / Edit med (unchanged logic; UI sized inputs match CSS) ----------
 function openAddMedicine() {
   modalBody.innerHTML = `
-      <h3>Add Medicine</h3>
-      <div class="form-row">
-        <label>Family member</label>
-        <div style="position:relative">
-          <select id="med-family" class="custom-select">${users
-            .map((u) => `<option value="${u.id}">${u.name}</option>`)
-            .join("")}</select>
-          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-weight:700">▾</span>
-        </div>
-      </div>
-      <div class="form-row"><label>Medicine name</label><input id="med-name" type="text" /></div>
-      <div class="form-row flex" style="gap:12px">
-        <div style="flex:1"><label>Dosage</label><input id="med-dosage" type="text" placeholder="e.g., 500mg"></div>
-        <div style="width:170px"><label>Type</label><select id="med-type" class="custom-select"><option>Tablet</option><option>Capsule</option><option>Syrup</option><option>Injection</option></select></div>
-      </div>
-  
-      <div class="form-row">
-        <label>Dosage Times</label>
-        <div id="times-list"></div>
-        <div id="add-time" class="add-time">➕ <span style="margin-left:8px">Add Time</span></div>
-        <div class="hint">Add one or more times (HH:MM). Times determine daily frequency.</div>
-      </div>
-  
-      <div class="form-row flex" style="gap:12px">
-        <div style="flex:1"><label>Start date</label><input id="med-start" type="date" /></div>
-        <div style="flex:1"><label>End date (optional)</label><input id="med-end" type="date" /></div>
-      </div>
-  
-      <div class="form-row"><label>Stock Qty (optional)</label><input id="med-stock" type="number" min="0" /></div>
-      <div class="form-row"><label>Notes</label><textarea id="med-notes" rows="3"></textarea></div>
-  
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-        <button id="save-med" class="btn primary">Add Medicine</button>
-        <button id="cancel-med" class="btn small">Cancel</button>
-      </div>
-    `;
+  <h3>Add Medicine</h3>
+  <div class="form-row">
+    <label>Family member</label>
+    <div style="position:relative">
+      <select id="med-family" class="custom-select">${users
+        .map((u) => `<option value="${u.id}">${u.name}</option>`)
+        .join("")}</select>
+      <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-weight:700">▾</span>
+    </div>
+  </div>
+
+  <div class="form-row"><label>Medicine name</label><input id="med-name" type="text" /></div>
+
+  <div class="form-row flex" style="gap:12px">
+    <div style="flex:1">
+      <label>Dosage</label>
+      <input id="med-dosage" type="text" placeholder="e.g., 500mg">
+    </div>
+
+    <div style="width:170px">
+      <label>Type</label>
+      <select id="med-type" class="custom-select">
+        <option>Tablet</option>
+        <option>Capsule</option>
+        <option>Syrup</option>
+        <option>Injection</option>
+        <option>Insulin</option>
+        <option>Drops (ear/eye/nasal)</option>
+        <option>Inhaler</option>
+        <option>Cream / Ointment</option>
+        <option>Patch</option>
+        <option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label>Prescribed by</label>
+    <input id="med-doctor" type="text" placeholder="Doctor's name (optional)" />
+  </div>
+
+  <div class="form-row">
+    <label>Dosage Times</label>
+    <div id="times-list"></div>
+    <div id="add-time" class="add-time">➕ <span style="margin-left:8px">Add Time</span></div>
+    <div class="hint">Add one or more times (HH:MM). Times determine daily frequency.</div>
+  </div>
+
+  <div class="form-row flex" style="gap:12px">
+    <div style="flex:1"><label>Start date</label><input id="med-start" type="date" /></div>
+    <div style="flex:1"><label>End date (optional)</label><input id="med-end" type="date" /></div>
+  </div>
+
+  <div class="form-row"><label>Stock Qty (optional)</label><input id="med-stock" type="number" min="0" /></div>
+  <div class="form-row"><label>Notes</label><textarea id="med-notes" rows="3"></textarea></div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+    <button id="save-med" class="btn primary">Add Medicine</button>
+    <button id="cancel-med" class="btn small">Cancel</button>
+  </div>
+`;
+
   modal.classList.remove("hidden");
 
   const timesListEl = document.getElementById("times-list");
@@ -661,8 +775,10 @@ function openAddMedicine() {
       endDate: end,
       stockQty: stock,
       notes,
+      prescribedBy: document.getElementById("med-doctor").value.trim() || "",
       createdAt: new Date().toISOString(),
     };
+
     meds.push(med);
     saveMeds(meds);
     closeModal();
@@ -677,49 +793,67 @@ function openEditMed(id) {
   const m = meds.find((x) => x.id === id);
   if (!m) return alert("Not found");
   modalBody.innerHTML = `
-      <h3>Edit Medicine</h3>
-      <div class="form-row"><label>Medicine name</label><input id="med-name" type="text" value="${
-        m.name
-      }" /></div>
-      <div class="form-row flex" style="gap:12px">
-        <div style="flex:1"><label>Dosage</label><input id="med-dosage" type="text" value="${
-          m.dosage || ""
-        }"></div>
-        <div style="width:170px"><label>Type</label><select id="med-type" class="custom-select"><option${
-          m.type === "Tablet" ? " selected" : ""
-        }>Tablet</option><option${
-    m.type === "Capsule" ? " selected" : ""
-  }>Capsule</option><option${
-    m.type === "Syrup" ? " selected" : ""
-  }>Syrup</option><option${
-    m.type === "Injection" ? " selected" : ""
-  }>Injection</option></select></div>
-      </div>
-  
-      <div class="form-row">
-        <label>Dosage Times</label>
-        <div id="times-list"></div>
-        <div id="add-time" class="add-time">➕ <span style="margin-left:8px">Add Time</span></div>
-        <div class="hint">Add one or more times (HH:MM). Times determine daily frequency.</div>
-      </div>
-  
-      <div class="form-row flex" style="gap:12px">
-        <div style="flex:1"><label>Start date</label><input id="med-start" type="date" value="${
-          m.startDate || ""
-        }" /></div>
-        <div style="flex:1"><label>End date (optional)</label><input id="med-end" type="date" value="${
-          m.endDate || ""
-        }" /></div>
-      </div>
-  
-      <div class="form-row"><label>Stock Qty (optional)</label><input id="med-stock" type="number" value="${
-        m.stockQty || 0
-      }" min="0" /></div>
-      <div class="form-row"><label>Notes</label><textarea id="med-notes" rows="3">${
-        m.notes || ""
-      }</textarea></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button id="save-med" class="btn primary">Save</button><button id="cancel-med" class="btn small">Cancel</button></div>
-    `;
+  <h3>Edit Medicine</h3>
+  <div class="form-row"><label>Medicine name</label><input id="med-name" type="text" value="${
+    m.name
+  }" /></div>
+
+  <div class="form-row flex" style="gap:12px">
+    <div style="flex:1"><label>Dosage</label><input id="med-dosage" type="text" value="${
+      m.dosage || ""
+    }"></div>
+    <div style="width:170px"><label>Type</label>
+      <select id="med-type" class="custom-select">
+        <option${m.type === "Tablet" ? " selected" : ""}>Tablet</option>
+        <option${m.type === "Capsule" ? " selected" : ""}>Capsule</option>
+        <option${m.type === "Syrup" ? " selected" : ""}>Syrup</option>
+        <option${m.type === "Injection" ? " selected" : ""}>Injection</option>
+        <option${m.type === "Insulin" ? " selected" : ""}>Insulin</option>
+        <option${
+          m.type === "Drops (ear/eye/nasal)" ? " selected" : ""
+        }>Drops (ear/eye/nasal)</option>
+        <option${m.type === "Inhaler" ? " selected" : ""}>Inhaler</option>
+        <option${
+          m.type === "Cream / Ointment" ? " selected" : ""
+        }>Cream / Ointment</option>
+        <option${m.type === "Patch" ? " selected" : ""}>Patch</option>
+        <option${m.type === "Other" ? " selected" : ""}>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label>Prescribed by</label>
+    <input id="med-doctor" type="text" placeholder="Doctor's name (optional)" value="${
+      m.prescribedBy || ""
+    }" />
+  </div>
+
+  <div class="form-row">
+    <label>Dosage Times</label>
+    <div id="times-list"></div>
+    <div id="add-time" class="add-time">➕ <span style="margin-left:8px">Add Time</span></div>
+    <div class="hint">Add one or more times (HH:MM). Times determine daily frequency.</div>
+  </div>
+
+  <div class="form-row flex" style="gap:12px">
+    <div style="flex:1"><label>Start date</label><input id="med-start" type="date" value="${
+      m.startDate || ""
+    }" /></div>
+    <div style="flex:1"><label>End date (optional)</label><input id="med-end" type="date" value="${
+      m.endDate || ""
+    }" /></div>
+  </div>
+
+  <div class="form-row"><label>Stock Qty (optional)</label><input id="med-stock" type="number" value="${
+    m.stockQty || 0
+  }" min="0" /></div>
+  <div class="form-row"><label>Notes</label><textarea id="med-notes" rows="3">${
+    m.notes || ""
+  }</textarea></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button id="save-med" class="btn primary">Save</button><button id="cancel-med" class="btn small">Cancel</button></div>
+`;
+
   modal.classList.remove("hidden");
 
   const timesListEl = document.getElementById("times-list");
@@ -766,6 +900,7 @@ function openEditMed(id) {
     m.stockQty =
       parseInt(document.getElementById("med-stock").value || "0") || 0;
     m.notes = document.getElementById("med-notes").value.trim();
+    m.prescribedBy = document.getElementById("med-doctor").value.trim() || "";
     saveMeds(meds);
     closeModal();
     refreshAllUI();
@@ -786,32 +921,96 @@ function openViewMed(id) {
       ? Math.floor(m.stockQty / Math.max(1, timesPerDay))
       : null;
 
+  // calendar / course dates
+  const startLabel = m.startDate || "Not set";
+  const endLabel = m.endDate || "Not set";
+
   modalBody.innerHTML = `
-      <h3>${m.name}</h3>
-      <div class="med-meta">${m.dosage || ""} • ${m.type || ""} • ${
-    owner ? owner.name : ""
-  }</div>
-      <div style="margin-top:8px">${m.notes || ""}</div>
-      <div style="margin-top:12px"><div style="font-weight:700">Dosage & Frequency</div><div class="hint">${
-        m.dosage || ""
-      } • ${freqText}</div></div>
-      <div style="margin-top:12px"><div style="font-weight:700">Daily Times</div><div class="badges">${(
-        m.times || []
-      )
+  <h3>${m.name}</h3>
+
+  <div class="med-meta">
+    ${m.dosage || ""} • ${m.type || ""} • ${owner ? owner.name : ""}
+  </div>
+
+  <div style="margin-top:8px">
+    ${m.notes || ""}
+  </div>
+
+  <!-- PRESCRIBED BY -->
+  <div style="margin-top:10px; font-size:14px; color:var(--muted);">
+    <strong style="color:var(--accent); font-weight:700; margin-right:8px">
+      Prescribed by:
+    </strong>
+    ${
+      m.prescribedBy && m.prescribedBy.trim()
+        ? `<span>${escapeHtml(m.prescribedBy)}</span>`
+        : `<span class="hint">Not specified</span>`
+    }
+  </div>
+
+  <!-- SCHEDULE / CALENDAR DATES -->
+  <div style="margin-top:12px">
+    <div style="font-weight:700">Schedule</div>
+    <div class="hint" style="font-weight:700">
+      Start: ${startLabel} <br> ${
+    endLabel !== "Not set" ? `End: ${endLabel}` : "End: Not set"
+  }
+    </div>
+  </div>
+
+  <div style="margin-top:12px">
+    <div style="font-weight:700">Dosage & Frequency</div>
+    <div class="hint" style="font-weight:700">
+      ${m.dosage || ""} • ${
+    (m.times || []).length
+      ? formatFrequency((m.times || []).length)
+      : "No schedule"
+  }
+    </div>
+  </div>
+
+  <div style="margin-top:12px">
+    <div style="font-weight:700">Daily Times</div>
+    <div class="badges">
+      ${(m.times || [])
         .map((t) => `<div class="time-badge">${t}</div>`)
-        .join("")}</div></div>
-      <div style="margin-top:12px"><div style="font-weight:700">Stock</div><div class="stock-box" style="margin-top:8px"><div style="flex:1"><div class="stock-qty">Stock: ${
-        m.stockQty ?? 0
-      } doses</div><div class="stock-days">${
-    daysRemaining === null
-      ? "Estimate unavailable"
-      : `~${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining`
-  }</div></div></div></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="close-view" class="btn small">Close</button></div>
-    `;
+        .join("")}
+    </div>
+  </div>
+
+  <div style="margin-top:12px">
+    <div style="font-weight:700">Stock</div>
+    <div class="stock-box" style="margin-top:8px">
+      <div style="flex:1">
+        <div class="stock-qty">Stock: ${m.stockQty ?? 0} doses</div>
+        <div class="stock-days">
+          ${
+            (m.times || []).length && m.stockQty
+              ? `~${Math.floor(
+                  m.stockQty / Math.max(1, (m.times || []).length)
+                )} day${
+                  Math.floor(
+                    m.stockQty / Math.max(1, (m.times || []).length)
+                  ) === 1
+                    ? ""
+                    : "s"
+                } remaining`
+              : "Estimate unavailable"
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button id="close-view" class="btn small">Close</button>
+  </div>
+`;
+
   modal.classList.remove("hidden");
   document.getElementById("close-view").addEventListener("click", closeModal);
 }
+
 
 // ---------- delete / reminders ----------
 function deleteMed(id) {
@@ -881,16 +1080,63 @@ memberListEl.addEventListener("click", (e) => {
   if (act === "edit") {
     const u = users.find((x) => x.id === id);
     if (!u) return;
-    modalBody.innerHTML = `<h3>Edit Member</h3><div class="form-row"><label>Name</label><input id="fm-name" type="text" value="${
-      u.name
-    }" /></div><div class="form-row"><label>Relationship</label><input id="fm-relationship" type="text" value="${
+    modalBody.innerHTML = `
+  <h3>Edit Member</h3>
+
+  <div class="form-row">
+    <label>Name</label>
+    <input id="fm-name" type="text" value="${escapeHtml(u.name)}" />
+  </div>
+
+  <div class="form-row">
+    <label>Relationship</label>
+    <input id="fm-relationship" type="text" value="${escapeHtml(
       u.relationship || ""
-    }" /></div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="save-fm" class="btn primary">Save</button><button id="cancel-fm" class="btn small">Cancel</button></div>`;
+    )}" />
+  </div>
+
+  <div class="form-row">
+    <label>Age (optional)</label>
+    <input id="fm-age" type="number" value="${u.age || ""}" />
+  </div>
+
+  <div class="form-row">
+    <label>Avatar</label>
+    <select id="fm-avatar" class="avatar-select">
+      <option value="👤" ${!u.avatar ? "selected" : "👤"}>👤 Default</option>
+      <option value="👨" ${u.avatar === "👨" ? "selected" : ""}>👨 Man</option>
+      <option value="👩" ${
+        u.avatar === "👩" ? "selected" : ""
+      }>👩 Woman</option>
+      <option value="👶" ${u.avatar === "👶" ? "selected" : ""}>👶 Baby</option>
+      <option value="👦" ${u.avatar === "👦" ? "selected" : ""}>👦 Boy</option>
+      <option value="👧" ${u.avatar === "👧" ? "selected" : ""}>👧 Girl</option>
+      <option value="👵" ${
+        u.avatar === "👵" ? "selected" : ""
+      }>👵 Old Woman</option>
+      <option value="👴" ${
+        u.avatar === "👴" ? "selected" : ""
+      }>👴 Old Man</option>
+      <option value="🐶" ${u.avatar === "🐶" ? "selected" : ""}>🐶 Dog</option>
+      <option value="🐱" ${u.avatar === "🐱" ? "selected" : ""}>🐱 Cat</option>
+      <option value="🙂" ${
+        u.avatar === "🙂" ? "selected" : ""
+      }>🙂 Smile</option>
+    </select>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button id="save-fm" class="btn primary">Save</button>
+    <button id="cancel-fm" class="btn small">Cancel</button>
+  </div>
+`;
+
     modal.classList.remove("hidden");
     document.getElementById("cancel-fm").addEventListener("click", closeModal);
     document.getElementById("save-fm").addEventListener("click", () => {
       u.name = document.getElementById("fm-name").value.trim();
       u.relationship = document.getElementById("fm-relationship").value.trim();
+      u.avatar = document.getElementById("fm-avatar").value || "";
       saveUsers(users);
       closeModal();
       refreshAllUI();
@@ -921,15 +1167,57 @@ filterMemberSel.addEventListener("change", () => {
 
 // Add Member
 function openAddMember() {
-  modalBody.innerHTML = `<h3>Add Family Member</h3><div class="form-row"><label>Name</label><input id="fm-name" type="text" /></div><div class="form-row"><label>Relationship</label><input id="fm-relationship" type="text" /></div><div class="form-row"><label>Age (optional)</label><input id="fm-age" type="number" /></div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="save-fm" class="btn primary">Add Member</button><button id="cancel-fm" class="btn small">Cancel</button></div>`;
+  modalBody.innerHTML = `
+  <h3>Add Family Member</h3>
+
+  <div class="form-row">
+    <label>Name</label>
+    <input id="fm-name" type="text" />
+  </div>
+
+  <div class="form-row">
+    <label>Relationship</label>
+    <input id="fm-relationship" type="text" />
+  </div>
+
+  <div class="form-row">
+    <label>Age (optional)</label>
+    <input id="fm-age" type="number" />
+  </div>
+
+  <div class="form-row">
+    <label>Avatar</label>
+    <select id="fm-avatar" class="avatar-select">
+      <option value="👤">👤 Default</option>
+      <option value="👨">👨 Man</option>
+      <option value="👩">👩 Woman</option>
+      <option value="👶">👶 Baby</option>
+      <option value="👦">👦 Boy</option>
+      <option value="👧">👧 Girl</option>
+      <option value="👵">👵 Old Woman</option>
+      <option value="👴">👴 Old Man</option>
+      <option value="🐶">🐶 Dog</option>
+      <option value="🐱">🐱 Cat</option>
+      <option value="🙂">🙂 Smile</option>
+    </select>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+    <button id="save-fm" class="btn primary">Add Member</button>
+    <button id="cancel-fm" class="btn small">Cancel</button>
+  </div>
+`;
+
   modal.classList.remove("hidden");
   document.getElementById("cancel-fm").addEventListener("click", closeModal);
   document.getElementById("save-fm").addEventListener("click", () => {
     const name = document.getElementById("fm-name").value.trim();
     const rel = document.getElementById("fm-relationship").value.trim();
     const age = document.getElementById("fm-age").value.trim();
+    const avatar = document.getElementById("fm-avatar").value || "";
     if (!name) return alert("Name required");
-    const u = { id: uid("u_"), name, relationship: rel, age, avatar: "" };
+    const u = { id: uid("u_"), name, relationship: rel, age, avatar };
+
     users.push(u);
     saveUsers(users);
     activeMemberId = u.id;
